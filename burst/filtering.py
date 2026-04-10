@@ -307,6 +307,42 @@ class Filtering:
 
         self.collect_queries('anime', definition)
 
+    def use_music(self, provider, payload):
+        """ Setup method to define music search parameters
+
+        Args:
+            provider (str): Provider ID
+            payload (dict): Elementum search payload
+        """
+        # Domain name preferred order:
+        # root_url -> base_url (see update_definitions()) -> public_dns_alias OR tor_dns_alias -> user defined alias
+        definition = definitions[provider]
+        if get_setting("use_public_dns", bool) and "public_dns_alias" in definition:
+            definition = get_alias(definition, definition["public_dns_alias"])
+        if get_setting("use_tor_dns", bool) and "tor_dns_alias" in definition:
+            definition = get_alias(definition, definition["tor_dns_alias"])
+        definition = get_alias(definition, get_setting("%s_alias" % provider))
+
+        # Use music_query if defined, otherwise fall back to general_query
+        music_query = definition.get('music_query') or definition.get('general_query') or ''
+        log.debug("[%s] Music URL: %s%s" % (provider, definition['base_url'], music_query))
+        if get_setting('separate_sizes', bool):
+            self.min_size = get_float(get_setting('min_size_music'))
+            self.max_size = get_float(get_setting('max_size_music'))
+            self.check_sizes()
+        self.info = payload
+
+        # Bypass resolution filtering for music searches
+        self.filter_resolutions = False
+
+        self.url = u"%s%s" % (definition['base_url'], music_query)
+
+        # Use music_keywords if defined, otherwise fall back to general_keywords
+        if 'music_keywords' in definition and definition['music_keywords']:
+            self.collect_queries('music', definition)
+        else:
+            self.collect_queries('general', definition)
+
     def split_title_per_languages(self, text, item_type):
         """ Split {title:lang1:lang2:...} into separate queries {title:lang1}, {title:lang2} and so on
         """
