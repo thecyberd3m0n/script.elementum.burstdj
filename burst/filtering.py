@@ -328,9 +328,19 @@ class Filtering:
             definition = get_alias(definition, definition["tor_dns_alias"])
         definition = get_alias(definition, get_setting("%s_alias" % provider))
 
-        # Use music_query if defined, otherwise fall back to general_query
-        music_query = definition.get('music_query') or definition.get('general_query') or ''
-        log.debug("[%s] Music URL: %s%s" % (provider, definition['base_url'], music_query))
+        # Use music_base_url if defined (allows providers to supply a completely
+        # different base URL for music searches, e.g. with different category filters);
+        # otherwise fall back to the regular base_url.
+        music_base_url = definition.get('music_base_url') or definition['base_url']
+        # Use music_query if defined, otherwise fall back to general_query (but only
+        # when there is no separate music_base_url that already encodes the query path)
+        if 'music_query' in definition:
+            music_query = definition.get('music_query') or ''
+        elif 'music_base_url' in definition:
+            music_query = ''
+        else:
+            music_query = definition.get('general_query') or ''
+        log.debug("[%s] Music URL: %s%s" % (provider, music_base_url, music_query))
         if get_setting('separate_sizes', bool):
             self.min_size = get_float(get_setting('min_size_music'))
             self.max_size = get_float(get_setting('max_size_music'))
@@ -340,7 +350,7 @@ class Filtering:
         # Bypass resolution filtering for music searches
         self.filter_resolutions = False
 
-        self.url = u"%s%s" % (definition['base_url'], music_query)
+        self.url = u"%s%s" % (music_base_url, music_query)
 
         # Use music_keywords if defined, otherwise fall back to general_keywords
         if 'music_keywords' in definition and definition['music_keywords']:
