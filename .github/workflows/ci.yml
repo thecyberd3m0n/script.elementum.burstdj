@@ -1,0 +1,89 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - '**'
+    tags:
+      - 'v*'
+  pull_request:
+
+jobs:
+  test:
+    name: Lint & check
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run flake8
+        run: python -m flake8
+
+      - name: Install gettext
+        run: sudo apt-get install -y gettext
+
+      - name: Check locales
+        run: ./scripts/xgettext.sh
+
+  build:
+    name: Build zip
+    runs-on: ubuntu-latest
+    needs: test
+    if: github.ref_type != 'tag'
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Get addon version
+        id: version
+        run: |
+          VERSION=$(sed -ne "s/.*COLOR\]\"\sversion=\"\([0-9a-z\.\-]*\)\".*/\1/p" addon.xml)
+          echo "zip_file=script.elementum.burst-${VERSION}.zip" >> "$GITHUB_OUTPUT"
+
+      - name: Build zip
+        run: make zip
+
+      - name: Upload zip artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: addon-zip
+          path: ${{ steps.version.outputs.zip_file }}
+
+  release:
+    name: Release
+    runs-on: ubuntu-latest
+    needs: test
+    if: startsWith(github.ref, 'refs/tags/')
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Get addon version
+        id: version
+        run: |
+          VERSION=$(sed -ne "s/.*COLOR\]\"\sversion=\"\([0-9a-z\.\-]*\)\".*/\1/p" addon.xml)
+          echo "zip_file=script.elementum.burst-${VERSION}.zip" >> "$GITHUB_OUTPUT"
+
+      - name: Build zip
+        run: make zip
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: ${{ steps.version.outputs.zip_file }}
+          generate_release_notes: true
