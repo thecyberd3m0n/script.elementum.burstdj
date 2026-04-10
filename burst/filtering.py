@@ -310,6 +310,11 @@ class Filtering:
     def use_music(self, provider, payload):
         """ Setup method to define music search parameters
 
+        Falls back to general_query and general_keywords when the provider definition
+        does not include music-specific fields (music_query, music_keywords).
+        Resolution filtering is bypassed for music searches since audio content does
+        not carry video resolution markers.
+
         Args:
             provider (str): Provider ID
             payload (dict): Elementum search payload
