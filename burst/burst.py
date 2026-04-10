@@ -686,7 +686,7 @@ def run_provider(provider, payload, method, start_time, timeout):
     Args:
         provider   (str): Provider ID
         payload   (dict): Search payload from Elementum
-        method     (str): Type of search, can be ``general``, ``movie``, ``show``, ``season`` or ``anime``
+        method     (str): Type of search, can be ``general``, ``movie``, ``show``, ``season``, ``anime`` or ``music``
         start_time (int): Time when search has been started
         timeout    (int): Time limit for searching
     """
@@ -705,6 +705,8 @@ def run_provider(provider, payload, method, start_time, timeout):
         filterInstance.use_episode(provider, payload)
     elif method == 'anime':
         filterInstance.use_anime(provider, payload)
+    elif method == 'music':
+        filterInstance.use_music(provider, payload)
     else:
         filterInstance.use_general(provider, payload)
 
